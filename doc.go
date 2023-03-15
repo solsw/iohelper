@@ -1,2 +1,2 @@
-// Package iohelper contains NonBlockWriter - the io.WriteCloser implementation, that does not block on Write call.
+// Package iohelper contains [io] package helpers.
 package iohelper

@@ -7,8 +7,12 @@ import (
 	"sync"
 )
 
-// NonBlockWriter is a wrapper around io.Writer that does not block on Write call.
-// To gracefully wait for the wrapped io.Writer to finish writing, Close must be called (typically by 'defer' statement).
+// NonBlockWriter is a wrapper around [io.Writer] that does not block on [io.Writer.Write] call.
+// NonBlockWriter implements [io.WriteCloser] interface.
+// To gracefully wait for the wrapped [io.Writer] to finish writing,
+// [Close] must be called (typically by [defer] statement).
+//
+// [defer]: https://go.dev/ref/spec#Defer_statements
 type NonBlockWriter struct {
 	wr        io.Writer
 	ch        chan []byte
@@ -20,11 +24,12 @@ type NonBlockWriter struct {
 	writing   bool
 }
 
-// NewNonBlockWriter creates a new NonBlockWriter.
-// 'w' - wrapped io.Writer.
-// 'size' - buffer size of the underlying chan []byte (defaults to math.MaxInt16 if zero or negative).
-// 'onError' (if not nil) is called if the wrapped io.Writer.Write returns an error.
-// If 'onError' returns true, NonBlockWriter is immediately closed and any remaining non-written data is discarded.
+// NewNonBlockWriter creates a new [NonBlockWriter]:
+//   - 'w' - wrapped [io.Writer];
+//   - 'size' - buffer size of the underlying chan []byte (defaults to [math.MaxInt16] if zero or negative);
+//   - 'onError' (if not nil) is called if the wrapped [io.Writer.Write] returns an error.
+//
+// If 'onError' returns true, [NonBlockWriter] is immediately closed and any remaining non-written data is discarded.
 func NewNonBlockWriter(w io.Writer, size int, onError func(error) bool) *NonBlockWriter {
 	if size < 1 {
 		size = math.MaxInt16
@@ -50,8 +55,8 @@ func NewNonBlockWriter(w io.Writer, size int, onError func(error) bool) *NonBloc
 	return &newnbw
 }
 
-// Write implements the io.Writer interface.
-// If NonBlockWriter is not closed, Write returns len(p) and nil.
+// Write implements the [io.Writer] interface.
+// If [NonBlockWriter] is closed, Write returns an error.
 func (nbw *NonBlockWriter) Write(p []byte) (int, error) {
 	if nbw.closed {
 		return -1, errors.New("NonBlockWriter is closed")
@@ -59,7 +64,7 @@ func (nbw *NonBlockWriter) Write(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	// since the same slice may be passed to this method in separate calls (e.g. as log.Println does),
+	// since the same slice may be passed to this method in separate calls (e.g. as [log.Println] does),
 	// the current contents of 'p' must be copied to a new local slice
 	// fmt.Printf("%p\n", p) <- prints the same address when NonBlockWriter is passed to log.SetOutput
 	locp := make([]byte, len(p))
@@ -69,9 +74,9 @@ func (nbw *NonBlockWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// Close waits for the wrapped io.Writer to finish writing
-// and returns the error (if any) returned by the last wrapped io.Writer.Write call.
-// Close implements the io.Closer interface.
+// Close waits for the wrapped [io.Writer] to finish writing
+// and returns the error (if any) returned by the last wrapped [io.Writer.Write] call.
+// Close implements the [io.Closer] interface.
 func (nbw *NonBlockWriter) Close() error {
 	nbw.onceClose.Do(func() {
 		nbw.closed = true
@@ -81,12 +86,12 @@ func (nbw *NonBlockWriter) Close() error {
 	return nbw.err
 }
 
-// LastResult returns result of the last wrapped io.Writer.Write call.
+// LastResult returns result of the last wrapped [io.Writer.Write] call.
 func (nbw *NonBlockWriter) LastResult() (int, error) {
 	return nbw.n, nbw.err
 }
 
-// IsWriting reports whether the wrapped io.Writer is in the writing phase or not.
+// IsWriting reports whether the wrapped [io.Writer] is in the writing phase or not.
 func (nbw *NonBlockWriter) IsWriting() bool {
 	return nbw.writing
 }
