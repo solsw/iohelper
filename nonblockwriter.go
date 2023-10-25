@@ -24,11 +24,10 @@ type NonBlockWriter struct {
 	writing   bool
 }
 
-// NewNonBlockWriter creates a new [NonBlockWriter]:
-//   - 'w' - wrapped [io.Writer];
-//   - 'size' - buffer size of the underlying chan []byte (defaults to [math.MaxInt16] if zero or negative);
-//   - 'onError' (if not nil) is called if the wrapped [io.Writer.Write] returns an error.
-//
+// NewNonBlockWriter creates a new [NonBlockWriter].
+// 'w' - wrapped [io.Writer].
+// 'size' - buffer size of the underlying chan []byte (defaults to [math.MaxInt16] if zero or negative).
+// 'onError' (if not nil) is called if the wrapped [io.Writer.Write] returns an error.
 // If 'onError' returns true, [NonBlockWriter] is immediately closed and any remaining non-written data is discarded.
 func NewNonBlockWriter(w io.Writer, size int, onError func(error) bool) *NonBlockWriter {
 	if size < 1 {
@@ -56,7 +55,7 @@ func NewNonBlockWriter(w io.Writer, size int, onError func(error) bool) *NonBloc
 }
 
 // Write implements the [io.Writer] interface.
-// If [NonBlockWriter] is closed, Write returns an error.
+// If 'nbw' is closed, Write returns an error.
 func (nbw *NonBlockWriter) Write(p []byte) (int, error) {
 	if nbw.closed {
 		return -1, errors.New("NonBlockWriter is closed")
