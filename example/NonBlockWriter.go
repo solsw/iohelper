@@ -37,16 +37,14 @@ func (esw *errSleepWriter) Write(p []byte) (int, error) {
 
 func example() {
 	fmt.Println("example start")
-	// ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Millisecond)
+	ctx := context.Background()
+	// ctx, cancel := context.WithTimeout(context.Background(), 800*time.Millisecond)
 	// defer cancel()
 	nbw := iohelper.NewNonBlockWriter(
-		context.Background(),
-		// ctx,
-
+		ctx,
 		// os.Stdout,
-		// &sleepWriter{w: os.Stdout},
-		&errSleepWriter{w: os.Stdout},
-
+		&sleepWriter{w: os.Stdout},
+		// &errSleepWriter{w: os.Stdout},
 		0,
 		func(error) bool { return true },
 	)
@@ -56,7 +54,7 @@ func example() {
 		}
 	}()
 	log.SetOutput(nbw)
-	for i := 1; i <= 16; i++ {
+	for i := 1; i <= 10; i++ {
 		log.Println(i)
 	}
 	fmt.Println("example end")

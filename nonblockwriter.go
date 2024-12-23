@@ -3,6 +3,7 @@ package iohelper
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"sync"
@@ -11,7 +12,7 @@ import (
 // NonBlockWriter is a wrapper around [io.Writer] that does not block on [io.Writer.Write] call.
 // NonBlockWriter implements [io.WriteCloser] interface.
 // To gracefully wait for the wrapped [io.Writer] to finish writing,
-// [Close] method must be called (typically by [defer] statement).
+// [NonBlockWriter.Close] method must be called (typically by [defer] statement).
 //
 // [defer]: https://go.dev/ref/spec#Defer_statements
 type NonBlockWriter struct {
@@ -30,8 +31,8 @@ type NonBlockWriter struct {
 // 'w' - wrapped [io.Writer].
 // 'size' - buffer size of the underlying chan []byte (defaults to [math.MaxInt16] if zero or negative).
 // 'onError' (if not nil) is called if the wrapped [io.Writer.Write] returns an error.
-// If 'onError' returns true, [NonBlockWriter] is immediately closed
-// and any remaining non-written data is discarded by [Close] method.
+// If 'onError' returns true (or ctx.Err() returns a non-nil error), [NonBlockWriter] is closed
+// and any remaining non-written data is discarded by [NonBlockWriter.Close] method.
 func NewNonBlockWriter(ctx context.Context, w io.Writer, size int, onError func(error) bool) *NonBlockWriter {
 	if size < 1 {
 		size = math.MaxInt16
@@ -53,10 +54,10 @@ func NewNonBlockWriter(ctx context.Context, w io.Writer, size int, onError func(
 			nbw.n, nbw.err = nbw.wr.Write(bb)
 			nbw.writing = false
 			if nbw.err != nil && onError != nil && onError(nbw.err) {
-				nbw.closed = true
 				break
 			}
 		}
+		nbw.closed = true
 		nbw.done.Done()
 	}(&newnbw)
 	return &newnbw
@@ -64,9 +65,13 @@ func NewNonBlockWriter(ctx context.Context, w io.Writer, size int, onError func(
 
 // Write implements the [io.Writer] interface.
 // Write returns an error only if 'nbw' is closed.
-// An error (if any) returned by the wrapped [io.Writer.Write] call is returned by [Close] method.
+// An error (if any) returned by the wrapped [io.Writer.Write] call is returned
+// by [NonBlockWriter.Close] or [NonBlockWriter.LastResult] methods.
 func (nbw *NonBlockWriter) Write(p []byte) (int, error) {
 	if nbw.closed {
+		if nbw.err != nil {
+			return -1, fmt.Errorf("NonBlockWriter is closed: %w", nbw.err)
+		}
 		return -1, errors.New("NonBlockWriter is closed")
 	}
 	if len(p) == 0 {
