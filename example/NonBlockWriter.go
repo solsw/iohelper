@@ -40,7 +40,7 @@ func example() {
 	ctx := context.Background()
 	// ctx, cancel := context.WithTimeout(context.Background(), 800*time.Millisecond)
 	// defer cancel()
-	nbw := iohelper.NewNonBlockWriter(
+	nbw, _ := iohelper.NewNonBlockWriter(
 		ctx,
 		// os.Stdout,
 		&sleepWriter{w: os.Stdout},
@@ -54,7 +54,7 @@ func example() {
 		}
 	}()
 	log.SetOutput(nbw)
-	for i := 1; i <= 10; i++ {
+	for i := range 8 {
 		log.Println(i)
 	}
 	fmt.Println("example end")
